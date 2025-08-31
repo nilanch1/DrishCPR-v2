@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DRISH CPR Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.header {
+  padding: 15px 20px;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.header h1 {
+  font-size: 1.8rem;
+  color: #4CAF50;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Enhanced status indicators container */
+.status-indicators {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-right: 75px;
+}
+
+.status-indicator {
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+/* LED indicator styles */
+.led-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+  position: relative;
+  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.led-indicator::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.led-indicator.green {
+  background: radial-gradient(circle at 30% 30%, #4ade80, #16a34a);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.6), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  animation: greenPulse 2s ease-in-out infinite;
+}
+
+.led-indicator.red {
+  background: radial-gradient(circle at 30% 30%, #f87171, #dc2626);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  animation: redPulse 1s ease-in-out infinite;
+}
+
+.led-indicator.yellow {
+  background: radial-gradient(circle at 30% 30%, #fbbf24, #d97706);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.6), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  animation: yellowPulse 1.5s ease-in-out infinite;
+}
+
+.led-indicator.blue {
+  background: radial-gradient(circle at 30% 30%, #60a5fa, #3b82f6);
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.6), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  animation: bluePulse 2.5s ease-in-out infinite;
+}
+
+.led-indicator.gray {
+  background: radial-gradient(circle at 30% 30%, #9ca3af, #6b7280);
+  box-shadow: 0 0 5px rgba(156, 163, 175, 0.4), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes greenPulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(34, 197, 94, 0.4), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.8), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@keyframes redPulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(239, 68, 68, 0.4), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.8), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@keyframes yellowPulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(245, 158, 11, 0.4), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.7), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+@keyframes bluePulse {
+  0%, 100% { 
+    box-shadow: 0 0 5px rgba(59, 130, 246, 0.4), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+  50% { 
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.7), inset 1px 1px 2px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Connection status styling */
+.connection-status {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.connection-status.connected {
+  background-color: rgba(40, 167, 69, 0.2);
+  border-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+}
+
+.connection-status.disconnected {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+}
+
+/* Internet status styling */
+.internet-status {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.internet-status.connected {
+  background-color: rgba(40, 167, 69, 0.2);
+  border-color: rgba(40, 167, 69, 0.3);
+  color: #28a745;
+}
+
+.internet-status.disconnected {
+  background-color: rgba(220, 53, 69, 0.2);
+  border-color: rgba(220, 53, 69, 0.3);
+  color: #dc3545;
+}
+
+.internet-status.checking {
+  background-color: rgba(255, 193, 7, 0.2);
+  border-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+}
+
+/* Cloud status styling */
+.cloud-status {
+  background-color: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cloud-status.enabled {
+  background-color: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.3);
+  color: #3b82f6;
+}
+
+.cloud-status.disabled {
+  background-color: rgba(156, 163, 175, 0.2);
+  border-color: rgba(156, 163, 175, 0.3);
+  color: #9ca3af;
+}
+
+.cloud-status.syncing {
+  background-color: rgba(168, 85, 247, 0.2);
+  border-color: rgba(168, 85, 247, 0.3);
+  color: #a855f7;
+}
+
+/* Status text */
+.status-text {
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+/* Main Content */
+.main-content {
+  flex: 1;
+  display: flex;
+  padding: 20px;
+  gap: 30px;
+  height: calc(100vh - 120px);
+}
+
+/* Animation section */
+.animation-section {
+  flex: 0 0 65%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.image-container {
+  width: 100%;
+  max-width: 800px;
+  border: 4px solid #444;
+  border-radius: 20px;
+  overflow: hidden;
+  background: black;
+  transition: border-color 0.2s ease, transform 0.1s ease;
+  position: relative;
+  aspect-ratio: 4/3;
+  margin-bottom: 20px;
+}
+
+.image-container.compression {
+  border-color: #ff6b6b;
+  transform: scale(1.02);
+  box-shadow: 0 0 30px rgba(255, 107, 107, 0.4);
+}
+
+.image-container.recoil {
+  border-color: #4ecdc4;
+  transform: scale(0.98);
+  box-shadow: 0 0 30px rgba(78, 205, 196, 0.4);
+}
+
+.image-container.quietude {
+  border-color: #555;
+  transform: scale(1.0);
+  box-shadow: 0 0 15px rgba(85, 85, 85, 0.2);
+}
+
+.cpr-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: absolute;
+  top: 0;
+  left: 0;
+  opacity: 0;
+  transition: opacity 0.05s ease-in-out;
+}
+
+.cpr-image.active {
+  opacity: 1;
+}
+
+.state-indicator {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  z-index: 10;
+}
+
+.state-indicator.compression {
+  background: rgba(255, 107, 107, 0.9);
+  color: white;
+}
+
+.state-indicator.recoil {
+  background: rgba(78, 205, 196, 0.9);
+  color: white;
+}
+
+.state-indicator.quietude {
+  background: rgba(136, 136, 136, 0.9);
+  color: white;
+}
+
+.alert-section {
+  width: 100%;
+  max-width: 800px;
+}
+
+#alert-box {
+  font-size: 1.2em;
+  font-weight: bold;
+  padding: 15px;
+  border-radius: 15px;
+  text-align: center;
+  transition: all 0.3s ease;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.alert-green {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: 2px solid #28a745;
+}
+
+.alert-yellow {
+  background: linear-gradient(135deg, #ffc107, #fd7e14);
+  color: #856404;
+  border: 2px solid #ffc107;
+  animation: alertPulse 2s ease-in-out infinite;
+}
+
+.alert-red {
+  background: linear-gradient(135deg, #dc3545, #e74c3c);
+  color: white;
+  border: 2px solid #dc3545;
+  animation: alertPulse 1s ease-in-out infinite;
+}
+
+.alert-gray {
+  background: linear-gradient(135deg, #6c757d, #495057);
+  color: white;
+  border: 2px solid #6c757d;
+}
+
+.alert-blue {
+  background: linear-gradient(135deg, #17a2b8, #007bff);
+  color: white;
+  border: 2px solid #17a2b8;
+}
+
+@keyframes alertPulse {
+  0%, 100% { box-shadow: 0 0 5px rgba(220, 53, 69, 0.5); }
+  50% { box-shadow: 0 0 25px rgba(220, 53, 69, 0.8); }
+}
+
+/* Right Side - Metrics and Controls */
+.controls-section {
+  flex: 0 0 35%;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  flex: 1;
+}
+
+.metric-card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  padding: 12px;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.metric-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #4CAF50, #2196F3);
+}
+
+.metric-title {
+  font-size: 0.85rem;
+  color: #B0BEC5;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.metric-value {
+  font-size: 1.7rem;
+  font-weight: bold;
+  color: #4CAF50;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.metric-unit {
+  font-size: 0.9rem;
+  color: #90A4AE;
+  margin-left: 4px;
+}
+
+.metric-card.large {
+  grid-column: span 2;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  text-align: left;
+}
+
+.metric-card.large .metric-group {
+  text-align: center;
+}
+
+.controls-panel {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.controls-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+}
+
+button {
+  padding: 10px 18px;
+  font-size: 0.9rem;
+  font-weight: bold;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+button:active {
+  transform: translateY(0);
+}
+
+button.stop {
+  background: linear-gradient(135deg, #f44336, #d32f2f);
+  box-shadow: 0 4px 15px rgba(244, 67, 54, 0.3);
+}
+
+button.stop:hover {
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+
+button.secondary {
+  background: linear-gradient(135deg, #2196F3, #1976D2);
+  box-shadow: 0 4px 15px rgba(33, 150, 243, 0.3);
+}
+
+button.secondary:hover {
+  box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+}
+
+#recording-status {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #4CAF50;
+  text-align: center;
+  padding: 8px;
+  background: rgba(76, 175, 80, 0.1);
+  border-radius: 10px;
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.menu-button {
+  position: absolute;
+  top: 50%;
+  right: 20px;
+  transform: translateY(-50%);
+  z-index: 1000;
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  border: none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s ease;
+}
+
+.menu-button:hover {
+  transform: translateY(-50%) scale(1.1);
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  fill: white;
+}
+
+.dropdown-menu {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: rgba(0, 0, 0, 0.9);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  padding: 10px 0;
+  min-width: 200px;
+  display: none;
+  z-index: 999;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.dropdown-menu.show {
+  display: block;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 12px 20px;
+  color: white;
+  text-decoration: none;
+  transition: background-color 0.2s;
+}
+
+.dropdown-menu a:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.audio-status {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 10px 15px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  z-index: 1000;
+  display: none;
+}
+
+.audio-status.show {
+  display: block;
+}
+
+.audio-status.loading {
+  background: linear-gradient(90deg, rgba(76, 175, 80, 0.8), rgba(33, 150, 243, 0.8), rgba(76, 175, 80, 0.8));
+  background-size: 200% 100%;
+  animation: audioLoading 2s ease-in-out infinite;
+}
+
+@keyframes audioLoading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Responsive Design */
+@media (max-height: 800px) {
+  .header {
+    padding: 10px 20px;
+  }
+  
+  .header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .main-content {
+    padding: 15px;
+    gap: 20px;
+  }
+  
+  .metric-card {
+    padding: 10px;
+  }
+  
+  .metric-value {
+    font-size: 1.5rem;
+  }
+  
+  .controls-panel {
+    padding: 15px;
+  }
+  
+  .status-indicators {
+    gap: 10px;
+  }
+  
+  .status-indicator {
+    padding: 6px 12px;
+    font-size: 0.75rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .main-content {
+    flex-direction: column;
+    height: auto;
+    overflow-y: auto;
+  }
+  
+  .animation-section {
+    flex: none;
+  }
+  
+  .controls-section {
+    flex: none;
+  }
+  
+  .metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .controls-row {
+    flex-direction: column;
+  }
+  
+  .metric-card.large {
+    grid-column: span 2;
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .status-indicators {
+    flex-direction: column;
+    gap: 8px;
+    margin-right: 85px;
+  }
+  
+  .status-indicator {
+    padding: 5px 10px;
+    font-size: 0.7rem;
+  }
+}
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>DRISH CPR Dashboard</h1>
+<!-- Enhanced Status Indicators with Cloud Status -->
+<div class="status-indicators">
+  <div id="internet-status" class="status-indicator internet-status checking">
+    <span class="led-indicator yellow"></span>
+    <div class="status-text">Internet<br>Checking...</div>
+  </div>
+  
+  <div id="connection-status" class="status-indicator connection-status disconnected">
+    <span class="led-indicator red"></span>
+    <div class="status-text">WebSocket<br>Connecting...</div>
+  </div>
+  
+  <!-- Cloud Status Indicator -->
+  <div id="cloud-status" class="status-indicator cloud-status disabled">
+    <span class="led-indicator gray"></span>
+    <div class="status-text">Cloud<br>Disabled</div>
+  </div>
+</div>
+
+<!-- Menu Button -->
+<button class="menu-button" onclick="toggleMenu()">
+  <svg class="menu-icon" viewBox="0 0 24 24">
+    <path d="M3,6H21V8H3V6M3,11H21V13H3V11M3,16H21V18H3V16Z" />
+  </svg>
+</button>
+  </div>
+  <!-- Enhanced Dropdown Menu with Cloud Configuration -->
+  <div id="dropdown-menu" class="dropdown-menu">
+    <a href="/ssid_config">📶 WiFi Configuration</a>
+    <a href="/cloud_config">☁️ Cloud Configuration</a>
+    <a href="/config">⚙️ CPR Configuration</a>
+    <a href="/data">📊 Data Management</a>
+  </div>
+  <!-- Audio Status Indicator -->
+  <div id="audio-status" class="audio-status">Audio initializing...</div>
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Left Side - Animation -->
+    <div class="animation-section">
+      <div class="image-container" id="image-container">
+        <img id="recoil-image" 
+             class="cpr-image active" 
+             src="/A4.png" 
+             alt="Recoil/Quietude State"
+             onload="handleImageLoad('recoil')"
+             onerror="handleImageError('recoil', '/A4.png')">
+    <img id="compression-image" 
+         class="cpr-image" 
+         src="/B4.png" 
+         alt="Compression State"
+         onload="handleImageLoad('compression')"
+         onerror="handleImageError('compression', '/B4.png')">
+    
+    <div id="state-indicator" class="state-indicator quietude">Quietude</div>
+  </div>
+
+  <div class="alert-section">
+    <div id="alert-box" class="alert-gray">Ready to start training session</div>
+  </div>
+</div>
+
+<!-- Right Side - Metrics and Controls -->
+<div class="controls-section">
+  <!-- Metrics Grid -->
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-title">CPR Rate</div>
+      <div class="metric-value" id="rate-value">--<span class="metric-unit">/min</span></div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-title">CCF</div>
+      <div class="metric-value" id="ccf-value">--<span class="metric-unit">%</span></div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-title">Cycles</div>
+      <div class="metric-value" id="cycle-count">--</div>
+    </div>
+
+    <div class="metric-card">
+      <div class="metric-title">Session</div>
+      <div class="metric-value" id="session-id">--</div>
+    </div>
+
+    <div class="metric-card large">
+      <div class="metric-group">
+        <div class="metric-title">Compression Quality</div>
+        <div class="metric-value" id="compression-quality">--</div>
+      </div>
+      <div class="metric-group">
+        <div class="metric-title">Recoil Quality</div>
+        <div class="metric-value" id="recoil-quality">--</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controls Panel -->
+  <div class="controls-panel">
+    <div class="controls-row">
+      <button id="record-button" onclick="toggleRecording()">Start Training</button>
+      <button class="secondary" onclick="window.location.href='/config'">Settings</button>
+    </div>
+    
+    <div id="recording-status">Ready to start training session</div>
+  </div>
+</div>
+  </div>
+
+
+  <script>
+    // =============================================
+    // GLOBAL STATE WITH DUAL WEBSOCKETS AND ENHANCED MONITORING
+    // =============================================
+    let isRecording = false;
+    let currentSessionId = 0;
+    let lastKnownState = '';
+    let messageQueue = [];
+    const MAX_QUEUE_SIZE = 10;
+    
+    // Image loading
+    let imagesLoaded = { recoil: false, compression: false };
+    let allImagesReady = false;
+
+    // REAL-TIME AUDIO SYSTEM
+    let audioEnabled = false;
+    let audioInitialized = false;
+    let lastAlertTime = 0;
+    let isPlayingAudio = false;
+    const AUDIO_GAP = 3000; // Fixed 3-second gap between any audio
+    let audioContext = null;
+    let currentAlerts = []; // Real-time alerts only
+    let currentAlertIndex = 0; // For cycling through multiple alerts
+    let audioInterval = null; // For 3-second interval timer
+
+    // ENHANCED CONNECTIVITY MONITORING
+    let internetConnected = false;
+    let wifiConnected = false;
+    let cloudEnabled = false;
+    let cloudSyncInProgress = false;
+    let lastInternetCheck = 0;
+    let internetCheckInterval = null;
+    const INTERNET_CHECK_FREQUENCY = 15000; // Check every 15 seconds
+
+    // Exact MP3 file mappings based on your SPIFFS files
+    const audioFiles = {
+      'rateTooLow': '/rateTooLow.mp3',
+      'rateTooHigh': '/rateTooHigh.mp3', 
+      'depthTooLow': '/depthTooLow.mp3',
+      'depthTooHigh': '/depthTooHigh.mp3',
+      'incompleteRecoil': '/incompleteRecoil.mp3'
+    };
+
+    
+
+
+// Alert text to MP3 file mapping
+const alertToAudioMap = {
+  'CPR rate too low': 'rateTooLow',
+  'too low': 'rateTooLow',
+  'Press harder': 'depthTooLow',
+  'CPR rate too high': 'rateTooHigh', 
+  'too high': 'rateTooHigh',
+  'Be gentle': 'depthTooHigh',
+  'Release more': 'incompleteRecoil'
+};
+
+// =============================================
+// DUAL WEBSOCKET CONNECTION SYSTEM
+// =============================================
+let socket;           // Metrics WebSocket (2Hz, JSON)
+let animSocket;       // Animation WebSocket (20Hz, binary)
+let reconnectAttempts = 0;
+let animReconnectAttempts = 0;
+let maxReconnectAttempts = 5;
+let reconnectDelay = 2000;
+
+// =============================================
+// MESSAGE QUEUE AND PROCESSING FUNCTIONS
+// =============================================
+function addToQueue(data) {
+  // Add data to message queue
+  messageQueue.push(data);
+  
+  // Limit queue size
+  if (messageQueue.length > MAX_QUEUE_SIZE) {
+    messageQueue.shift(); // Remove oldest message
+  }
+  
+  // Process the latest message immediately
+  processQueuedMessage(data);
+}
+
+function processQueuedMessage(data) {
+  try {
+    // Handle different message types
+    if (data.type === 'metrics') {
+      updateMetricsDisplay(data);
+      updateAudioAlerts(data.alerts || []);
+    } else if (data.type === 'recording_status') {
+      updateRecordingStatus(data);
+    } else if (data.type === 'network_status') {
+      handleNetworkStatusUpdate(data);
+    }
+  } catch (error) {
+    console.error('Error processing queued message:', error, data);
+  }
+}
+
+function updateMetricsDisplay(data) {
+  try {
+    // Update rate display
+    const rateElement = document.getElementById('rate-value');
+    if (rateElement) {
+      rateElement.innerHTML = (data.rate || 0) + '<span class="metric-unit">/min</span>';
+    }
+    
+    // Update CCF display
+    const ccfElement = document.getElementById('ccf-value');
+    if (ccfElement) {
+      ccfElement.innerHTML = (data.ccf || 0).toFixed(1) + '<span class="metric-unit">%</span>';
+    }
+    
+    // Update cycle count
+    const cycleElement = document.getElementById('cycle-count');
+    if (cycleElement) {
+      cycleElement.textContent = data.cycles || 0;
+    }
+    
+    // Update compression quality
+    const compressionElement = document.getElementById('compression-quality');
+    if (compressionElement) {
+      const ratio = data.good_compressions && data.total_compressions ? 
+        (data.good_compressions / data.total_compressions) : 0;
+      compressionElement.textContent = (ratio * 100).toFixed(0) + '%';
+    }
+    
+    // Update recoil quality
+    const recoilElement = document.getElementById('recoil-quality');
+    if (recoilElement) {
+      const ratio = data.good_recoils && data.total_recoils ? 
+        (data.good_recoils / data.total_recoils) : 0;
+      recoilElement.textContent = (ratio * 100).toFixed(0) + '%';
+    }
+    
+    // Update alert box
+    updateAlertBox(data.alerts || []);
+    
+  } catch (error) {
+    console.error('Error updating metrics display:', error);
+  }
+}
+
+function updateRecordingStatus(data) {
+  try {
+    const statusElement = document.getElementById('recording-status');
+    const recordButton = document.getElementById('record-button');
+    const sessionElement = document.getElementById('session-id');
+    const audio = new Audio("sound.mp3");
+    document.getElementById("record-button").addEventListener("click", () => {
+    audio.play();
+  });
+    
+    if (statusElement && recordButton) {
+      isRecording = data.is_recording;
+      currentSessionId = data.session_id;
+      
+      if (isRecording) {
+        statusElement.textContent = `Recording Session ${currentSessionId}`;
+        statusElement.style.color = '#f44336';
+        recordButton.textContent = 'Stop Training';
+        recordButton.className = 'stop';
+      } else {
+        statusElement.textContent = 'Ready to start training session';
+        statusElement.style.color = '#4CAF50';
+        recordButton.textContent = 'Start Training';
+        recordButton.className = '';
+      }
+    }
+    
+    if (sessionElement) {
+      sessionElement.textContent = currentSessionId || '--';
+    }
+  } catch (error) {
+    console.error('Error updating recording status:', error);
+  }
+}
+
+function updateAlertBox(alerts) {
+  try {
+    const alertBox = document.getElementById('alert-box');
+    if (!alertBox) return;
+    
+    // Clear existing classes
+    alertBox.className = '';
+    
+    if (!alerts || alerts.length === 0) {
+      if (isRecording) {
+        alertBox.className = 'alert-green';
+        alertBox.textContent = 'Good technique - keep going!';
+      } else {
+        alertBox.className = 'alert-gray';
+        alertBox.textContent = 'Ready to start training session';
+      }
+      return;
+    }
+    
+    // Show the first alert (most important)
+    const alert = alerts[0];
+    
+    if (alert.includes('rate too low') || alert.includes('rate too high')) {
+      alertBox.className = 'alert-red';
+    } else if (alert.includes('Press harder') || alert.includes('Be gentle') || alert.includes('Release more')) {
+      alertBox.className = 'alert-yellow';
+    } else if (alert.includes('No compressions')) {
+      alertBox.className = 'alert-blue';
+    } else {
+      alertBox.className = 'alert-gray';
+    }
+    
+    alertBox.textContent = alert;
+  } catch (error) {
+    console.error('Error updating alert box:', error);
+  }
+}
+
+function updateAudioAlerts(alerts) {
+  if (!audioEnabled || !alerts || alerts.length === 0) return;
+  
+  // Update current alerts for audio processing
+  currentAlerts = alerts.filter(alert => 
+    alert.includes('rate too low') || 
+    alert.includes('rate too high') || 
+    alert.includes('Press harder') || 
+    alert.includes('Be gentle') || 
+    alert.includes('Release more')
+  );
+}
+
+// =============================================
+// AUDIO SYSTEM FUNCTIONS
+// =============================================
+function initAudio() {
+  if (audioInitialized) return Promise.resolve();
+  
+  console.log('ðŸŽµ Initializing MP3 audio system...');
+  
+  return new Promise((resolve) => {
+    // For MP3 playback, we just need to enable the flag
+    audioEnabled = true;
+    audioInitialized = true;
+    
+    console.log('âœ… MP3 audio system ready');
+    resolve();
+  });
+}
+
+
+function playAudio(alertType) {
+  if (!audioEnabled || isPlayingAudio) return;
+  
+  const now = Date.now();
+  if (now - lastAlertTime < AUDIO_GAP) return;
+  
+  const audioFile = audioFiles[alertType];
+  if (!audioFile) {
+    console.warn('ðŸŽµ No audio file found for alert type:', alertType);
+    return;
+  }
+  
+  console.log('ðŸŽµ Playing audio:', alertType, audioFile);
+  
+  const audio = new Audio(audioFile);
+  audio.volume = 0.7;
+  
+  isPlayingAudio = true;
+  lastAlertTime = now;
+  
+  audio.play().then(() => {
+    console.log('ðŸŽµ Audio started successfully:', alertType);
+  }).catch(error => {
+    console.warn('ðŸŽµ Audio play failed:', error);
+    isPlayingAudio = false;
+  });
+  
+  audio.onended = () => {
+    isPlayingAudio = false;
+    console.log('ðŸŽµ Audio ended:', alertType);
+  };
+  
+  audio.onerror = () => {
+    isPlayingAudio = false;
+    console.warn('ðŸŽµ Audio error for:', alertType);
+  };
+}
+
+function processCurrentAlerts() {
+  if (!audioEnabled || currentAlerts.length === 0 || isPlayingAudio) return;
+  
+  const now = Date.now();
+  if (now - lastAlertTime < AUDIO_GAP) return;
+  
+  // Get the current alert to play
+  const alert = currentAlerts[currentAlertIndex % currentAlerts.length];
+  
+  // Find matching audio file
+  for (const [text, audioType] of Object.entries(alertToAudioMap)) {
+    if (alert.includes(text)) {
+      playAudio(audioType);
+      break;
+    }
+  }
+  
+  // Move to next alert for next interval
+  currentAlertIndex = (currentAlertIndex + 1) % currentAlerts.length;
+}
+
+function startAudioInterval() {
+  if (audioInterval) return;
+  
+  audioInterval = setInterval(() => {
+    if (isRecording && currentAlerts.length > 0) {
+      processCurrentAlerts();
+    }
+  }, AUDIO_GAP);
+  
+  console.log('ðŸŽµ Audio interval started (3-second intervals)');
+}
+
+function stopAudioInterval() {
+  if (audioInterval) {
+    clearInterval(audioInterval);
+    audioInterval = null;
+    console.log('ðŸŽµ Audio interval stopped');
+  }
+}
+
+
+// =============================================
+// ENHANCED STATUS INDICATOR FUNCTIONS
+// =============================================
+function updateInternetStatus(connected, checking = false) {
+  const internetStatusEl = document.getElementById('internet-status');
+  const ledEl = internetStatusEl.querySelector('.led-indicator');
+  const textEl = internetStatusEl.querySelector('.status-text');
+  
+  internetConnected = connected;
+  
+  // Remove all status classes
+  internetStatusEl.classList.remove('connected', 'disconnected', 'checking');
+  ledEl.classList.remove('green', 'red', 'yellow');
+  
+  if (checking) {
+    internetStatusEl.classList.add('checking');
+    ledEl.classList.add('yellow');
+    textEl.innerHTML = 'Internet<br>Checking...';
+  } else if (connected) {
+    internetStatusEl.classList.add('connected');
+    ledEl.classList.add('green');
+    textEl.innerHTML = 'Internet<br>Connected';
+  } else {
+    internetStatusEl.classList.add('disconnected');
+    ledEl.classList.add('red');
+    textEl.innerHTML = 'Internet<br>Offline';
+  }
+  
+  console.log(`ðŸŒ Internet status: ${checking ? 'checking' : (connected ? 'connected' : 'disconnected')}`);
+}
+
+function updateCloudStatus(enabled, syncing = false, provider = '') {
+  const cloudStatusEl = document.getElementById('cloud-status');
+  const ledEl = cloudStatusEl.querySelector('.led-indicator');
+  const textEl = cloudStatusEl.querySelector('.status-text');
+  
+  cloudEnabled = enabled;
+  cloudSyncInProgress = syncing;
+  
+  // Remove all status classes
+  cloudStatusEl.classList.remove('enabled', 'disabled', 'syncing');
+  ledEl.classList.remove('green', 'gray', 'blue');
+  
+  if (syncing) {
+    cloudStatusEl.classList.add('syncing');
+    ledEl.classList.add('blue');
+    textEl.innerHTML = 'Cloud<br>Syncing...';
+  } else if (enabled) {
+    cloudStatusEl.classList.add('enabled');
+    ledEl.classList.add('green');
+    textEl.innerHTML = `Cloud<br>${provider || 'Enabled'}`;
+  } else {
+    cloudStatusEl.classList.add('disabled');
+    ledEl.classList.add('gray');
+    textEl.innerHTML = 'Cloud<br>Disabled';
+  }
+  
+  console.log(`â˜ï¸ Cloud status: ${syncing ? 'syncing' : (enabled ? 'enabled' : 'disabled')}, provider: ${provider}`);
+}
+
+function updateWebSocketStatus(connected) {
+  const connectionStatusEl = document.getElementById('connection-status');
+  const ledEl = connectionStatusEl.querySelector('.led-indicator');
+  const textEl = connectionStatusEl.querySelector('.status-text');
+  
+  // Remove all status classes
+  connectionStatusEl.classList.remove('connected', 'disconnected');
+  ledEl.classList.remove('green', 'red');
+  
+  if (connected) {
+    connectionStatusEl.classList.add('connected');
+    ledEl.classList.add('green');
+    textEl.innerHTML = 'WebSocket<br>Connected';
+  } else {
+    connectionStatusEl.classList.add('disconnected');
+    ledEl.classList.add('red');
+    textEl.innerHTML = 'WebSocket<br>Disconnected';
+  }
+}
+
+function handleNetworkStatusUpdate(data) {
+  console.log('ðŸ“¡ Network status update:', data);
+  
+  if (typeof data.wifi_connected !== 'undefined') {
+    wifiConnected = data.wifi_connected;
+  }
+  
+  if (typeof data.internet_connected !== 'undefined') {
+    updateInternetStatus(data.internet_connected, false);
+  }
+  
+  // Handle cloud status updates
+  if (typeof data.cloud_enabled !== 'undefined') {
+    updateCloudStatus(data.cloud_enabled, data.cloud_sync_in_progress || false);
+  }
+}
+
+function checkInternetConnectivity() {
+  const now = Date.now();
+  if (now - lastInternetCheck < 5000) return; // Don't check more than once per 5 seconds
+  
+  lastInternetCheck = now;
+  updateInternetStatus(internetConnected, true);
+  
+  console.log('ðŸŒ Checking internet connectivity...');
+  
+  fetch('/internet_status', {
+    method: 'GET',
+    cache: 'no-cache',
+    signal: AbortSignal.timeout(8000) // 8 second timeout
+  })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log('ðŸŒ Internet status response:', data);
+    
+    wifiConnected = data.wifi_connected || false;
+    const newInternetStatus = data.internet_connected || false;
+    
+    updateInternetStatus(newInternetStatus, false);
+    
+    // Update cloud status from response
+    if (typeof data.cloud_enabled !== 'undefined') {
+      updateCloudStatus(data.cloud_enabled, data.cloud_sync_in_progress || false);
+    }
+    
+    // Also update WiFi info if available
+    if (data.wifi_ssid) {
+      console.log(`ðŸ“¶ WiFi: ${data.wifi_ssid} (${data.wifi_rssi}dBm)`);
+    }
+  })
+  .catch(error => {
+    console.warn('ðŸŒ Internet check failed:', error.message);
+    updateInternetStatus(false, false);
+  });
+}
+
+function startInternetMonitoring() {
+  console.log('ðŸŒ Starting internet and cloud connectivity monitoring...');
+  
+  // Initial check
+  setTimeout(checkInternetConnectivity, 2000);
+  
+  // Periodic checks
+  internetCheckInterval = setInterval(checkInternetConnectivity, INTERNET_CHECK_FREQUENCY);
+}
+
+function stopInternetMonitoring() {
+  if (internetCheckInterval) {
+    clearInterval(internetCheckInterval);
+    internetCheckInterval = null;
+    console.log('ðŸŒ Stopped internet monitoring');
+  }
+}
+
+// =============================================
+// STATE VISUALIZATION FUNCTIONS
+// =============================================
+function updateStateVisualization(state) {
+  if (state === lastKnownState) return;
+  lastKnownState = state;
+  
+  const container = document.getElementById('image-container');
+  const indicator = document.getElementById('state-indicator');
+  const recoilImage = document.getElementById('recoil-image');
+  const compressionImage = document.getElementById('compression-image');
+  
+  // Remove all state classes
+  container.classList.remove('compression', 'recoil', 'quietude');
+  indicator.classList.remove('compression', 'recoil', 'quietude');
+  recoilImage.classList.remove('active');
+  compressionImage.classList.remove('active');
+  
+  // Add current state
+  container.classList.add(state);
+  indicator.classList.add(state);
+  
+  if (state === 'compression') {
+    compressionImage.classList.add('active');
+    indicator.textContent = 'Compression';
+  } else {
+    recoilImage.classList.add('active');
+    indicator.textContent = state === 'recoil' ? 'Recoil' : 'Quietude';
+  }
+}
+
+function handleImageLoad(imageType) {
+  imagesLoaded[imageType] = true;
+  console.log(`âœ… ${imageType} image loaded`);
+  
+  if (imagesLoaded.recoil && imagesLoaded.compression) {
+    allImagesReady = true;
+    console.log('âœ… All images loaded successfully');
+  }
+}
+
+function handleImageError(imageType, src) {
+  console.error(`âŒ Failed to load ${imageType} image: ${src}`);
+  imagesLoaded[imageType] = false;
+}
+
+// =============================================
+// RECORDING CONTROL FUNCTIONS
+// =============================================
+function toggleRecording() {
+  // Initialize audio on first recording start (user interaction required)
+  if (!isRecording && !audioInitialized) {
+    console.log('ðŸŽµ Enabling audio for MP3 playback...');
+    
+    const audioStatus = document.getElementById('audio-status');
+    audioStatus.classList.add('show');
+    audioStatus.textContent = 'Enabling audio...';
+    
+    // Simply enable audio - no AudioContext needed for MP3 files
+    audioEnabled = true;
+    audioInitialized = true;
+    
+    console.log('ðŸŽµ Audio enabled for MP3 playback');
+    audioStatus.textContent = 'Audio enabled';
+    
+    setTimeout(() => {
+      audioStatus.classList.remove('show');
+    }, 2000);
+    
+    startAudioInterval();
+  }
+  
+  // Start/stop recording
+  startRecordingRequest();
+}
+
+
+function startRecordingRequest() {
+  fetch('/start_stop', { method: 'POST' })
+    .then(response => response.json())
+    .then(data => {
+      console.log('Recording toggle response:', data);
+      if (data.is_recording && audioEnabled) {
+        startAudioInterval();
+      } else if (!data.is_recording) {
+        stopAudioInterval();
+      }
+    })
+    .catch(error => {
+      console.error('Error toggling recording:', error);
+    });
+}
+
+// =============================================
+// MENU MANAGEMENT
+// =============================================
+function toggleMenu() {
+  document.getElementById("dropdown-menu").classList.toggle("show");
+}
+
+window.onclick = function(event) {
+  if (!event.target.closest('.menu-button') && !event.target.closest('.dropdown-menu')) {
+    document.getElementById("dropdown-menu").classList.remove("show");
+  }
+}
+
+// =============================================
+// ANIMATION WEBSOCKET CONNECTION
+// =============================================
+function connectAnimWebSocket() {
+  try {
+    animSocket = new WebSocket(`ws://${window.location.hostname}/animws`);
+    
+    animSocket.onopen = function() {
+      console.log('ðŸŽ¬ Animation WebSocket connected (20Hz binary)');
+      animReconnectAttempts = 0;
+    };
+
+    animSocket.onmessage = function(event) {
+      // Handle binary data for animation state
+      if (event.data instanceof Blob) {
+        const reader = new FileReader();
+        reader.onload = function() {
+          const compressionState = new Uint8Array(reader.result)[0];
+          const state = compressionState === 1 ? 'compression' : 'quietude';
+          updateStateVisualization(state);
+        };
+        reader.readAsArrayBuffer(event.data);
+      } else if (event.data instanceof ArrayBuffer) {
+        const compressionState = new Uint8Array(event.data)[0];
+        const state = compressionState === 1 ? 'compression' : 'quietude';
+        updateStateVisualization(state);
+      } else {
+        // Fallback for text messages (initial state)
+        try {
+          const data = JSON.parse(event.data);
+          if (data.state) {
+            updateStateVisualization(data.state);
+          }
+        } catch (e) {
+          console.warn('ðŸŽ¬ Unexpected animation message format:', event.data);
+        }
+      }
+    };
+
+    animSocket.onclose = function(event) {
+      console.warn('ðŸŽ¬ Animation WebSocket disconnected');
+      
+      if (animReconnectAttempts < maxReconnectAttempts) {
+        animReconnectAttempts++;
+        setTimeout(connectAnimWebSocket, reconnectDelay * animReconnectAttempts);
+      }
+    };
+
+    animSocket.onerror = function(error) {
+      console.error('ðŸŽ¬ Animation WebSocket error:', error);
+    };
+    
+  } catch (error) {
+    console.error('Failed to create animation WebSocket:', error);
+    setTimeout(connectAnimWebSocket, reconnectDelay);
+  }
+}
+
+// =============================================
+// METRICS WEBSOCKET CONNECTION (Enhanced)
+// =============================================
+function connectWebSocket() {
+  try {
+    socket = new WebSocket(`ws://${window.location.hostname}/ws`);
+    
+    socket.onopen = function() {
+      updateWebSocketStatus(true);
+      reconnectAttempts = 0;
+      console.log('âœ… Metrics WebSocket connected (2Hz JSON)');
+    };
+
+    socket.onmessage = function(event) {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Handle network status updates
+        if (data.type === 'network_status') {
+          handleNetworkStatusUpdate(data);
+        } else {
+          addToQueue(data);
+        }
+      } catch (error) {
+        console.error('Error parsing Metrics WebSocket message:', error);
+      }
+    };
+
+    socket.onclose = function(event) {
+      updateWebSocketStatus(false);
+      document.getElementById("alert-box").className = "alert-gray";
+      document.getElementById("alert-box").textContent = "Connection lost - attempting to reconnect...";
+      
+      if (reconnectAttempts < maxReconnectAttempts) {
+        reconnectAttempts++;
+        setTimeout(connectWebSocket, reconnectDelay * reconnectAttempts);
+      }
+    };
+
+    socket.onerror = function(error) {
+      console.error('Metrics WebSocket error:', error);
+      updateWebSocketStatus(false);
+    };
+    
+  } catch (error) {
+    console.error('Failed to create Metrics WebSocket:', error);
+    setTimeout(connectWebSocket, reconnectDelay);
+  }
+}
+
+
+// =============================================
+// ENHANCED INITIALIZATION WITH CLOUD MONITORING
+// =============================================
+window.addEventListener('load', function() {
+  console.log('ðŸš€ CPR Dashboard loaded with dual WebSocket system, internet monitoring, and cloud integration');
+  
+  // Initialize displays
+  document.getElementById("session-id").textContent = '--';
+  
+  
+  // Connect BOTH WebSockets
+  connectWebSocket();        // Metrics (2Hz JSON)
+  connectAnimWebSocket();    // Animation (20Hz binary)
+  
+  // Start enhanced connectivity monitoring
+  startInternetMonitoring();
+  
+  // Force image reload if needed
+  setTimeout(() => {
+    if (!allImagesReady) {
+      console.warn('âš ï¸ Images taking longer than expected, forcing reload...');
+      const recoilImg = document.getElementById('recoil-image');
+      const compressionImg = document.getElementById('compression-image');
+      recoilImg.src = recoilImg.src + '?t=' + Date.now();
+      compressionImg.src = compressionImg.src + '?t=' + Date.now();
+    }
+  }, 3000);
+  
+  // Cleanup on page unload
+  window.addEventListener('beforeunload', () => {
+    stopInternetMonitoring();
+    stopAudioInterval();
+  });
+});
+
+// =============================================
+// DEBUG FUNCTIONS AND GLOBAL OBJECT
+// =============================================
+
+// Create global debug object
+window.cprDashboard = {
+  getStatus: function() {
+    return {
+      isRecording: isRecording,
+      currentSessionId: currentSessionId,
+      lastKnownState: lastKnownState,
+      audioEnabled: audioEnabled,
+      audioInitialized: audioInitialized,
+      isPlayingAudio: isPlayingAudio,
+      internetConnected: internetConnected,
+      wifiConnected: wifiConnected,
+      cloudEnabled: cloudEnabled,
+      cloudSyncInProgress: cloudSyncInProgress,
+      webSocketConnected: socket && socket.readyState === WebSocket.OPEN,
+      animWebSocketConnected: animSocket && animSocket.readyState === WebSocket.OPEN,
+      allImagesReady: allImagesReady,
+      currentAlerts: currentAlerts,
+      messageQueueLength: messageQueue.length
+    };
+  },
+  
+  testAudio: function(alertText = "Press harder") {
+    console.log('ðŸŽµ Testing audio with alert:', alertText);
+    if (!audioEnabled) {
+      console.warn('ðŸŽµ Audio not enabled');
+      return false;
+    }
+    
+    for (const [text, audioType] of Object.entries(alertToAudioMap)) {
+      if (alertText.includes(text)) {
+        playAudio(audioType);
+        return true;
+      }
+    }
+    
+    console.warn('ðŸŽµ No audio mapping found for:', alertText);
+    return false;
+  },
+  
+  testAllAlerts: function() {
+    if (!audioEnabled) {
+      console.warn('ðŸŽµ Audio not enabled');
+      return;
+    }
+    
+    const alertTypes = Object.keys(audioFiles);
+    let index = 0;
+    
+    const playNext = () => {
+      if (index < alertTypes.length) {
+        console.log(`ðŸŽµ Testing ${index + 1}/${alertTypes.length}: ${alertTypes[index]}`);
+        playAudio(alertTypes[index]);
+        index++;
+        setTimeout(playNext, AUDIO_GAP + 500);
+      } else {
+        console.log('ðŸŽµ All audio tests completed');
+      }
+    };
+    
+    playNext();
+  },
+  
+  testAnimation: function() {
+    const states = ['compression', 'recoil', 'quietude'];
+    let index = 0;
+    
+    const cycleState = () => {
+      updateStateVisualization(states[index % states.length]);
+      index++;
+      if (index < 9) { // 3 cycles
+        setTimeout(cycleState, 1000);
+      }
+    };
+    
+    cycleState();
+  },
+  
+  testInternetConnectivity: function() {
+    checkInternetConnectivity();
+  },
+  
+  forceInternetCheck: function() {
+    lastInternetCheck = 0;
+    checkInternetConnectivity();
+  },
+  
+  enableAudio: function() {
+    return initAudio();
+  },
+  
+  disableAudio: function() {
+    audioEnabled = false;
+    stopAudioInterval();
+    console.log('ðŸŽµ Audio disabled');
+  }
+};
+
+// Show enhanced helpful tips in console
+console.log('ðŸŽ¯ CPR Dashboard Debug Commands (Enhanced with Cloud Monitoring):');
+console.log('- cprDashboard.getStatus() - Check complete system status including cloud');
+console.log('- cprDashboard.testAudio("Press harder") - Test audio');
+console.log('- cprDashboard.testAllAlerts() - Test all alert types');
+console.log('- cprDashboard.testAnimation() - Test animation states');
+console.log('- cprDashboard.testInternetConnectivity() - Test internet');
+console.log('- cprDashboard.forceInternetCheck() - Force internet check');
+console.log('â˜ï¸ Cloud Configuration:');
+console.log('  /cloud_config - Cloud settings page');
+console.log('  /cloud_sync_status - Cloud sync status API');
+console.log('  /trigger_cloud_sync - Manual cloud sync');
+console.log('ðŸ“¡ WebSocket Endpoints:');
+console.log('  /ws - Metrics data (2Hz JSON)');
+console.log('  /animws - Animation data (20Hz binary)');
+console.log('ðŸ“Š Available MP3 files:', Object.values(audioFiles));
+  </script>
+</body>
+</html>
