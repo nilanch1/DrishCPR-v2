@@ -451,261 +451,156 @@ String getAWSDate() {
     return String(date);
 }
 // Generate AWS Signature v4 for DigitalOcean Spaces
-String generateAWSv4Signature(const String& method, const String& uri, const String& host, 
-                             const String& contentType, const String& payload, 
-                             const String& accessKey, const String& secretKey) {
-    
+String generateAWSv4Signature(const String& method, const String& uri, const String& host,
+                             const String& contentType, const String& payload,
+                             const String& accessKey, const String& secretKey,
+                             bool unsignedPayload = false) {
     String datetime = getAWSDateTime();
     String date = getAWSDate();
-    String region = "sfo3"; // DigitalOcean Spaces region
+
+    // Extract region from endpoint host
+    String region = "us-east-1"; // default
+    int dotIndex = host.indexOf(".");
+    if (dotIndex > 0) {
+        region = host.substring(dotIndex + 1, host.indexOf(".", dotIndex + 1));
+    }
+    // For DigitalOcean it should give "sfo3"
+
     String service = "s3";
-    
-    // Calculate payload hash
-    String payloadHash = sha256(payload);
-    
-    // Create canonical headers
+
+    // 🔑 Payload handling
+    String payloadHash = unsignedPayload ? "UNSIGNED-PAYLOAD" : sha256(payload);
+
+    // Canonical headers
     String canonicalHeaders = "host:" + host + "\n" +
                              "x-amz-content-sha256:" + payloadHash + "\n" +
                              "x-amz-date:" + datetime + "\n";
-    
+
     String signedHeaders = "host;x-amz-content-sha256;x-amz-date";
-    
-    // Create canonical request
+
+    // Canonical request
     String canonicalRequest = method + "\n" +
                              uri + "\n" +
-                             "\n" +  // query string (empty)
+                             "\n" +
                              canonicalHeaders + "\n" +
                              signedHeaders + "\n" +
                              payloadHash;
-    
-    // Create string to sign
+
     String credentialScope = date + "/" + region + "/" + service + "/aws4_request";
     String stringToSign = "AWS4-HMAC-SHA256\n" +
                          datetime + "\n" +
                          credentialScope + "\n" +
                          sha256(canonicalRequest);
-    
-    // Calculate signing key
+
+    // === HMAC signing same as before ===
     String kSecret = "AWS4" + secretKey;
     uint8_t kDate[32];
-    hmacSha256((uint8_t*)kSecret.c_str(), kSecret.length(), (uint8_t*)date.c_str(), date.length(), kDate);
-    
+    hmacSha256((uint8_t*)kSecret.c_str(), kSecret.length(),
+               (uint8_t*)date.c_str(), date.length(), kDate);
+
     uint8_t kRegion[32];
     hmacSha256(kDate, 32, (uint8_t*)region.c_str(), region.length(), kRegion);
-    
+
     uint8_t kService[32];
     hmacSha256(kRegion, 32, (uint8_t*)service.c_str(), service.length(), kService);
-    
+
     uint8_t kSigning[32];
     String aws4Request = "aws4_request";
     hmacSha256(kService, 32, (uint8_t*)aws4Request.c_str(), aws4Request.length(), kSigning);
-    
-    // Calculate final signature
+
     uint8_t signature[32];
-    hmacSha256(kSigning, 32, (uint8_t*)stringToSign.c_str(), stringToSign.length(), signature);
-    
-    // Create authorization header
+    hmacSha256(kSigning, 32,
+               (uint8_t*)stringToSign.c_str(), stringToSign.length(),
+               signature);
+
     String authHeader = "AWS4-HMAC-SHA256 Credential=" + accessKey + "/" + credentialScope +
                        ", SignedHeaders=" + signedHeaders +
                        ", Signature=" + bytesToHex(signature, 32);
-    
+
     return authHeader;
 }
 
 
 // Replace your existing uploadToCloud function with this corrected version
 // Updated uploadToCloud function with proper AWS Signature v4
-bool uploadToCloud(const String& fileName, const String& fileContent) {
+bool uploadToCloud(const String& fileName, const String& localFilePath) {
     if (!cloudConfig.enabled || cloudConfig.provider.isEmpty()) {
-        Serial.println("Cloud upload disabled or not configured");
+        Serial.println("☁️ Cloud upload disabled or not configured");
         return false;
     }
-    
+
     if (!wifiConfigManager->isWiFiConnected()) {
-        Serial.println("WiFi not connected - cannot upload to cloud");
+        Serial.println("📡 WiFi not connected - cannot upload to cloud");
         return false;
     }
-    
-    // Check available heap before starting
-    size_t freeHeap = ESP.getFreeHeap();
-    Serial.printf("Free heap before upload: %u bytes\n", freeHeap);
-    
-    if (freeHeap < 50000) { // Less than 50KB free
-        Serial.println("❌ Insufficient memory for SSL upload");
+
+    File f = SPIFFS.open(localFilePath, "r");
+    if (!f) {
+        Serial.printf("❌ Failed to open file for upload: %s\n", localFilePath.c_str());
         return false;
     }
-    
-    // SET FLAG TO PAUSE OTHER CHECKS
-    fileUploadInProgress = true;
-    Serial.println("🚫 Pausing system checks during file upload...");
-    
-    Serial.printf("Uploading %s to %s cloud storage...\n", fileName.c_str(), cloudConfig.provider.c_str());
-    
-    bool uploadResult = false;
-    
-    if (cloudConfig.provider == "digitalocean") {
-        // Create WiFiClientSecure with conservative settings
-        WiFiClientSecure* client = new WiFiClientSecure();
-        if (!client) {
-            Serial.println("❌ Failed to allocate WiFiClientSecure");
-            fileUploadInProgress = false;
-            return false;
-        }
-        
-        // Configure SSL with minimal memory usage
-        client->setInsecure(); // Skip certificate verification to save memory
-        client->setTimeout(30000); // 30 second timeout
-        
-        // Note: setBufferSizes() is not available in ESP32 WiFiClientSecure
-        // The library manages buffers automatically
-        
-        HTTPClient* http = new HTTPClient();
-        if (!http) {
-            Serial.println("❌ Failed to allocate HTTPClient");
-            delete client;
-            fileUploadInProgress = false;
-            return false;
-        }
-        
-        String host = cloudConfig.bucketName + "." + cloudConfig.endpointUrl;
-        String uri = "/" + fileName;
-        String uploadUrl = "https://" + host + uri;
-        
-        Serial.printf("Upload URL: %s\n", uploadUrl.c_str());
-        Serial.printf("File size: %d bytes\n", fileContent.length());
-        
-        // Check heap again after allocations
-        Serial.printf("Free heap after allocations: %u bytes\n", ESP.getFreeHeap());
-        
-        if (!http->begin(*client, uploadUrl)) {
-            Serial.println("❌ Failed to begin HTTP connection");
-            delete http;
-            delete client;
-            fileUploadInProgress = false;
-            return false;
-        }
-        
-        // Generate AWS v4 signature
-        String authHeader = generateAWSv4Signature("PUT", uri, host, "text/csv", fileContent,
-                                                  cloudConfig.accessKey, cloudConfig.secretKey);
-        
-        String datetime = getAWSDateTime();
-        String payloadHash = sha256(fileContent);
-        
-        // Set headers
-        http->addHeader("Authorization", authHeader);
-        http->addHeader("x-amz-date", datetime);
-        http->addHeader("x-amz-content-sha256", payloadHash);
-        http->addHeader("Host", host);
-        http->addHeader("Content-Type", "text/csv");
-        http->addHeader("Content-Length", String(fileContent.length()));
-        
-        // Set timeouts
-        http->setTimeout(60000); // 60 seconds
-        http->setConnectTimeout(30000); // 30 seconds
-        
-        Serial.println("Starting upload...");
-        Serial.printf("Free heap before PUT: %u bytes\n", ESP.getFreeHeap());
-        
-        int httpResponseCode = http->PUT(fileContent);
-        
-        Serial.printf("HTTP Response Code: %d\n", httpResponseCode);
-        
-        if (httpResponseCode > 0) {
-            String response = http->getString();
-            Serial.printf("Response: %s\n", response.c_str());
-            uploadResult = (httpResponseCode == 200 || httpResponseCode == 201);
-        } else {
-            Serial.printf("HTTP Error: %s\n", http->errorToString(httpResponseCode).c_str());
-            
-            // Simplified retry logic on SSL failure
-            if (httpResponseCode == -1) {
-                Serial.println("🔄 SSL failed, trying simplified retry...");
-                delete http;
-                delete client;
-                
-                // Simple delay and retry with new client
-                delay(2000);
-                
-                // Verify WiFi is still connected
-                if (WiFi.status() == WL_CONNECTED) {
-                    Serial.println("📡 WiFi still connected, retrying upload...");
-                    
-                    // Create new client with even more conservative settings
-                    client = new WiFiClientSecure();
-                    if (client) {
-                        client->setInsecure();
-                        client->setTimeout(45000); // Longer timeout
-                        
-                        http = new HTTPClient();
-                        if (http && http->begin(*client, uploadUrl)) {
-                            // Retry with same headers
-                            http->addHeader("Authorization", authHeader);
-                            http->addHeader("x-amz-date", datetime);
-                            http->addHeader("x-amz-content-sha256", payloadHash);
-                            http->addHeader("Host", host);
-                            http->addHeader("Content-Type", "text/csv");
-                            http->addHeader("Content-Length", String(fileContent.length()));
-                            
-                            Serial.println("🔄 Retrying upload with conservative settings...");
-                            httpResponseCode = http->PUT(fileContent);
-                            Serial.printf("Retry HTTP Response Code: %d\n", httpResponseCode);
-                            
-                            if (httpResponseCode > 0) {
-                                uploadResult = (httpResponseCode == 200 || httpResponseCode == 201);
-                            }
-                        }
-                    }
-                } else {
-                    Serial.println("❌ WiFi disconnected during retry");
-                }
-            }
-        }
-        
-        // Cleanup
-        if (http) {
-            http->end();
-            delete http;
-        }
-        if (client) {
-            delete client;
-        }
-        
-        // DELETE LOCAL FILE AFTER SUCCESSFUL UPLOAD
-        if (uploadResult) {
-            Serial.println("✅ Upload successful - deleting local CSV file...");
-            
-            // Close CSV file if open
-            if (csvFileOpen && csvFile) {
-                csvFile.close();
-                csvFileOpen = false;
-                csvWriteCount = 0;
-            }
-            
-            // Delete the file
-            if (SPIFFS.exists(csvFileName)) {
-                if (SPIFFS.remove(csvFileName)) {
-                    Serial.printf("🗑️ Local CSV file deleted: %s\n", csvFileName.c_str());
-                } else {
-                    Serial.printf("⚠️ Failed to delete local CSV file: %s\n", csvFileName.c_str());
-                }
-            }
-            
-            // Reinitialize CSV system for next session
-            initializeCSVFile();
-        } else {
-            Serial.println("❌ Upload failed - keeping local CSV file");
-        }
+
+    size_t fileSize = f.size();
+    Serial.printf("📤 Preparing to upload %s (%u bytes) to cloud...\n",
+                  localFilePath.c_str(), fileSize);
+
+    WiFiClientSecure client;
+    client.setInsecure();       // skip cert validation, saves RAM
+    client.setTimeout(30000);
+
+    HTTPClient http;
+    // host = drishcpr.sfo3.digitaloceanspaces.com
+    String host = cloudConfig.bucketName + "." + cloudConfig.endpointUrl;
+    String uri = "/" + fileName;
+    String uploadUrl = "https://" + host + uri;
+
+    if (!http.begin(client, uploadUrl)) {
+        Serial.println("❌ Failed to begin HTTP connection");
+        f.close();
+        return false;
     }
-    
-    // CLEAR FLAG TO RESUME OTHER CHECKS - ALWAYS EXECUTE
-    fileUploadInProgress = false;
-    Serial.println("✅ Resuming system checks after file upload");
-    
+
+    // === AWS v4 signature with UNSIGNED-PAYLOAD ===
+    String authHeader = generateAWSv4Signature("PUT", uri, host, "text/csv", "",
+                                               cloudConfig.accessKey, cloudConfig.secretKey,
+                                               true /* unsignedPayload */);
+
+    String datetime = getAWSDateTime();
+
+    http.addHeader("Authorization", authHeader);
+    http.addHeader("x-amz-date", datetime);
+    http.addHeader("x-amz-content-sha256", "UNSIGNED-PAYLOAD");
+    http.addHeader("Host", host);
+    http.addHeader("Content-Type", "text/csv");
+    http.addHeader("Content-Length", String(fileSize));
+
+    Serial.println("🚀 Starting upload (streaming)...");
+    Serial.printf("Free heap before PUT: %u bytes\n", ESP.getFreeHeap());
+
+    int httpResponseCode = http.sendRequest("PUT", &f, fileSize);
+    f.close();
+
+    Serial.printf("HTTP Response Code: %d\n", httpResponseCode);
+
+    bool uploadResult = (httpResponseCode == 200 || httpResponseCode == 201);
+
+    http.end();
+
+    if (uploadResult) {
+        Serial.printf("✅ Upload successful, deleting local file: %s\n", localFilePath.c_str());
+        if (SPIFFS.remove(localFilePath)) {
+            Serial.println("🗑️ Local file deleted");
+        }
+        initializeCSVFile(); // re-init CSV after successful upload
+    } else {
+        Serial.println("❌ Upload failed - keeping local file");
+    }
+
     Serial.printf("Free heap after upload: %u bytes\n", ESP.getFreeHeap());
-    
+
     return uploadResult;
 }
+
 
 bool testCloudConnection() {
     if (cloudConfig.provider.isEmpty() || cloudConfig.accessKey.isEmpty()) {
@@ -723,58 +618,44 @@ void performCloudSync() {
     if (cloudSyncInProgress || !cloudConfig.enabled) {
         return;
     }
-    
+
     unsigned long now = millis();
-    unsigned long syncInterval = cloudConfig.syncFrequency * 60000UL; // Convert minutes to milliseconds
-    
-    // Check if it's time to sync
-    if (now - cloudConfig.lastSyncTime < syncInterval) {
-        return;
-    }
-    
-    // Don't retry too frequently on failures
-    if (now - lastCloudSyncAttempt < CLOUD_SYNC_RETRY_INTERVAL) {
-        return;
-    }
-    
+    unsigned long syncInterval = cloudConfig.syncFrequency * 60000UL;
+
+    if (now - cloudConfig.lastSyncTime < syncInterval) return;
+    if (now - lastCloudSyncAttempt < CLOUD_SYNC_RETRY_INTERVAL) return;
+
     lastCloudSyncAttempt = now;
     cloudSyncInProgress = true;
-    
+
     Serial.println("Starting cloud sync...");
-    
-    // Upload CSV file if it exists AND has data
+
     if (SPIFFS.exists(csvFileName)) {
-        // CHECK IF FILE HAS DATA BEFORE UPLOADING
         if (isCSVFileEmpty()) {
-            Serial.println("📄 CSV file is empty (headers only) - skipping upload");
-            cloudConfig.lastSyncTime = now; // Update sync time to prevent repeated checks
+            Serial.println("📄 CSV file is empty - skipping upload");
+            cloudConfig.lastSyncTime = now;
             saveCloudConfig();
         } else {
-            File csvFile = SPIFFS.open(csvFileName, "r");
-            if (csvFile) {
-                String csvContent = csvFile.readString();
-                csvFile.close();
-                
-                String cloudFileName = chipId + "_" + String(cloudConfig.syncedSessions + 1) + ".csv";
-                
-                if (uploadToCloud(cloudFileName, csvContent)) {
-                    cloudConfig.lastSyncTime = now;
-                    cloudConfig.syncedSessions++;
-                    saveCloudConfig();
-                    Serial.println("Cloud sync completed successfully");
-                } else {
-                    Serial.println("Cloud sync failed");
-                }
+            String cloudFileName = chipId + "_" + String(cloudConfig.syncedSessions + 1) + ".csv";
+            // 🔑 Call new streaming upload
+            if (uploadToCloud(cloudFileName, csvFileName)) {
+                cloudConfig.lastSyncTime = now;
+                cloudConfig.syncedSessions++;
+                saveCloudConfig();
+                Serial.println("☁️ Cloud sync completed successfully");
+            } else {
+                Serial.println("❌ Cloud sync failed");
             }
         }
     } else {
         Serial.println("📄 No CSV file found - skipping upload");
-        cloudConfig.lastSyncTime = now; // Update sync time
+        cloudConfig.lastSyncTime = now;
         saveCloudConfig();
     }
-    
+
     cloudSyncInProgress = false;
 }
+
 
 // =============================================
 // WEBSOCKET FUNCTIONS
