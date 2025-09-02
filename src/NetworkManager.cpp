@@ -1,5 +1,8 @@
 #include "NetworkManager.h"
 #include <HTTPClient.h>  
+extern "C" {
+  #include "esp_wifi.h"
+}
 
 void NetworkManager::checkInternetConnectivity() {
     // ADD THIS CHECK RIGHT HERE AT THE VERY BEGINNING
@@ -39,7 +42,7 @@ void NetworkManager::checkInternetConnectivity() {
     
     if (httpCode == 204) {
         internetConnected = true;
-        Serial.println("✅ Internet connectivity confirmed");
+        //Serial.println("✅ Internet connectivity confirmed");
     } else {
         internetConnected = false;
         Serial.printf("❌ Internet not available. HTTP code: %d\n", httpCode);
@@ -317,6 +320,7 @@ bool NetworkManager::enableAPSTA() {
     
     // Set WiFi mode to AP+STA
     WiFi.mode(WIFI_AP_STA);
+    esp_wifi_set_ps(WIFI_PS_NONE); // Disable power save for hotspot
     delay(100);
     
     // Setup AP

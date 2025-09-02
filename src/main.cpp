@@ -138,6 +138,7 @@ public:
         Serial.println("🔥 Starting WiFi Hotspot...");
         
         WiFi.mode(WIFI_AP_STA);
+        esp_wifi_set_ps(WIFI_PS_NONE); // Disable power save for hotspot
         
         IPAddress local_IP(192, 168, 4, 1);
         IPAddress gateway(192, 168, 4, 1);
